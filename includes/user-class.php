@@ -1,6 +1,5 @@
 <?php
-include_once 'db.php';
-include_once '../run.php';
+include_once __DIR__ . '/../run.php';
 
 include_once 'base.php';
 
@@ -11,7 +10,7 @@ enum Role: int {
 }
 
 class User extends DatabaseHandler {
-    protected string $tableName = 'collections';
+    protected static string $tableName = 'users';
 
     public string $username;
     public string $email;
@@ -21,13 +20,13 @@ class User extends DatabaseHandler {
 
     public function __construct(
         Runtime $runtime,
-        ?int $id, string $username, string $email, string $password, string $created_at, Role $role = Role::USER
+        ?int $id, string $username, string $email, string $password, Role $role = Role::USER
     ) {
         parent::__construct($runtime, $id);
         $this->username = $username;
         $this->email = $email;
         $this->password = $password;
-        $this->created_at = $created_at;
+        $this->created_at = date('Y-m-d H:i:s');
         $this->role = $role;
     }
 
@@ -36,6 +35,6 @@ class User extends DatabaseHandler {
     }
 
     public function getCollection(int $collectionId): ?Collection {
-        return $this->__runtime->getCollection($this->id, $collectionId);
+        return $this->__runtime->getUserCollections($this->id)[$collectionId] ?? null;
     }
 }

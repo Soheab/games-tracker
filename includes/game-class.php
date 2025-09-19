@@ -1,11 +1,10 @@
 <?php
-include_once 'db.php';
-include_once '../run.php';
+include_once __DIR__ . '/../run.php';
 
 include_once 'base.php';
 
 class Game extends DatabaseHandler {
-    protected string $tableName = 'games';
+    protected static string $tableName = 'games';
 
     public string $title;
     public string $genre;

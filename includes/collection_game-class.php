@@ -1,5 +1,5 @@
 <?php
-include_once 'run.php';
+include_once __DIR__ . '/../run.php';
 
 include_once 'base.php';
 include_once 'game-class.php';
@@ -14,7 +14,7 @@ enum Status: string {
 
 
 class CollectionGame extends DatabaseHandler {
-    protected string $tableName = 'collections_game';
+    protected static string $tableName = 'collection_game';
 
     public int $collection_id;
     public int $game_id;
@@ -26,13 +26,13 @@ class CollectionGame extends DatabaseHandler {
         ?int $id,
         int $collection_id,
         int $game_id,
-        Status $status,
+        string $status,
         string $added_at
     ) {
         parent::__construct($runtime, $id);
         $this->collection_id = $collection_id;
         $this->game_id = $game_id;
-        $this->status = $status;
+        $this->status = Status::from($status);
         $this->added_at = $added_at;
     }
 

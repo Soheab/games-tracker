@@ -1,18 +1,19 @@
 <?php
-include_once 'db.php';
-include_once '../run.php';
+include_once __DIR__ . '/../run.php';
 
 include_once 'base.php';
 include_once 'collection_game-class.php';
 
 
 class Collection extends DatabaseHandler {
-    protected string $tableName = 'collections';
+    protected static string $tableName = 'collections';
 
     public string $name;
+    public string $description;
+    public string $image_file;
     public int $user_id;
     public string $created_at;
-    public string $updated_at;
+    public ?string $updated_at = null;
 
     /** @var array<int, CollectionGame> */
     public array $games = [];
@@ -21,13 +22,17 @@ class Collection extends DatabaseHandler {
         Runtime $runtime,
         ?int $id,
         int $user_id,
-        string $created_at,
-        string $updated_at
+        string $name,
+        string $description,
+        string $image_file
+
     ) {
         parent::__construct($runtime, $id);
         $this->user_id = $user_id;
-        $this->created_at = $created_at;
-        $this->updated_at = $updated_at;
+        $this->name = $name;
+        $this->description = $description;
+        $this->image_file = $image_file;
+        $this->created_at = date('Y-m-d H:i:s');
     }
 
     /**

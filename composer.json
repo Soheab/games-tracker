@@ -1,0 +1,14 @@
+{
+    "require-dev": {
+        "squizlabs/php_codesniffer": "^4.0",
+        "friendsofphp/php-cs-fixer": "^3.87"
+    },
+    "require": {
+        "ext-pdo": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "includes/"
+        }
+    }
+}

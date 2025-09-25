@@ -1,12 +1,12 @@
 <?php
-include_once __DIR__ . '../includes/db.php';
-include_once __DIR__ . '../includes/game-class.php';
-include_once __DIR__ . '../includes/collection-class.php';
-include_once __DIR__ . '../includes/user-class.php';
+
+namespace App;
+
+use RuntimeException;
 
 class Runtime
 {
-    public Database $db;
+    public ?Database $db = null;
 
     // game_id => Game
     /** @var array<int, Game> */
@@ -23,28 +23,21 @@ class Runtime
     // logged in user
     private ?User $user = null;
 
+    public function getDatabase(): Database
+    {
+        if (!$this->db) {
+            $this->db = new Database();
+        }
+        return $this->db;
+    }
     public function __construct()
     {
-        // Ensure session is started before any output
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        if (isset($_SESSION['runtime'])) {
-            $saved = $_SESSION['runtime'];
-            $this->db = $saved->db;
-            $this->games = $saved->games;
-            $this->collections = $saved->collections;
-            $this->users = $saved->users;
-            return;
-        }
-
-        $_SESSION['runtime'] = $this;
-        $this->db = new Database();
+        $this->db = $this->getDatabase();
     }
 
-    public function setCurrentUser(User $user): void
+    public function __wakeup(): void
     {
-        $this->user = $user;
+        $this->getDatabase();
     }
 
     public function getCurrentUser(): ?User
@@ -63,14 +56,21 @@ class Runtime
         $params = ['email' => $email];
         $userPayload = $this->db->fetchOne($query, $params);
         if (!$userPayload) {
-            throw new RuntimeException("Gebruiker niet gevonden. Heb je wel een account aangemaakt? <a href='create.php'>Registreer hier</a>.");
+            throw new RuntimeException("Gebruiker niet gevonden. 
+Heb je wel een account? <a href='/users/register.php'>Registreer hier</a>.");
         }
-        if (!password_verify($password, $userPayload['password_hash'])) {
+        if (!password_verify($password, $userPayload['password'])) {
             throw new RuntimeException("Ongeldig wachtwoord.");
         }
         $user = User::fromArray($this, $userPayload);
         $this->setCurrentUser($user);
+
         return true;
+    }
+
+    public function setCurrentUser(User $user): void
+    {
+        $this->user = $user;
     }
 
     public function logout(): void
@@ -82,12 +82,13 @@ class Runtime
     public function getGames(): array
     {
         if (empty($this->games)) {
-            $query = "SELECT * FROM games ORDER BY created_at DESC";
+            $query = "SELECT * FROM games ORDER BY added_at DESC";
             $results = $this->db->execute($query);
             foreach ($results as $row) {
                 $this->games[$row['id']] = Game::fromArray($this, $row);
             }
         }
+
         return $this->games;
     }
 
@@ -100,6 +101,7 @@ class Runtime
                 $this->collections[$row['id']] = Collection::fromArray($this, $row);
             }
         }
+
         return $this->collections;
     }
 
@@ -112,25 +114,8 @@ class Runtime
                 $this->users[$row['id']] = User::fromArray($this, $row);
             }
         }
+
         return $this->users;
-    }
-
-    public function addGame(Game $game): void
-    {
-        $this->games[$game->id] = $game;
-    }
-
-    public function addCollection(int $userId, Collection $collection): void
-    {
-        if (!isset($this->collections[$userId])) {
-            $this->collections[$userId] = [];
-        }
-        array_push($this->collections[$userId], $collection);
-    }
-
-    public function addUser(User $user): void
-    {
-        $this->users[$user->id] = $user;
     }
 
     public function getUser(int $userId): ?User
@@ -147,7 +132,13 @@ class Runtime
         }
         $user = User::fromArray($this, $results);
         $this->addUser($user);
+
         return $user;
+    }
+
+    public function addUser(User $user): void
+    {
+        $this->users[$user->id] = $user;
     }
 
     public function getGame(int $id): ?Game
@@ -165,7 +156,13 @@ class Runtime
 
         $game = Game::fromArray($this, $results);
         $this->addGame($game);
+
         return $game;
+    }
+
+    public function addGame(Game $game): void
+    {
+        $this->games[$game->id] = $game;
     }
 
     public function getCollection(int $collectionId): ?Collection
@@ -185,13 +182,22 @@ class Runtime
         }
         $collection = Collection::fromArray($this, $results);
         $this->addCollection($collection->user_id, $collection);
+
         return $collection;
+    }
+
+    public function addCollection(int $userId, Collection $collection): void
+    {
+        if (!isset($this->collections[$userId])) {
+            $this->collections[$userId] = [];
+        }
+        $this->collections[$userId][$collection->id] = $collection;
     }
 
     public function getUserCollections(int $userId): array
     {
         $cached = $this->collections[$userId] ?? null;
-        if ($cached !== null) {
+        if ($cached !== null & !empty($cached)) {
             return $cached;
         }
         $query = "SELECT * FROM collections WHERE user_id = :user_id";
@@ -205,13 +211,23 @@ class Runtime
             $collection = Collection::fromArray($this, $row);
             $this->addCollection($userId, $collection);
         }
+
         return $this->collections[$userId];
     }
 }
 
 
-
 function getRuntime(): Runtime
 {
-    return $_SESSION['runtime'] ?? new Runtime();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    if (isset($_SESSION['runtime']) && $_SESSION['runtime'] instanceof Runtime) {
+        return $_SESSION['runtime'];
+    }
+
+    $runtime = new Runtime();
+    $_SESSION['runtime'] = $runtime;
+
+    return $runtime;
 }
